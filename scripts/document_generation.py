@@ -8,7 +8,7 @@ import time
 
 import prompts
 from config import load_config
-from model import OpenAIModel, QwenModel
+from model import GPT2Model, QwenModel
 from utils import print_with_color
 
 arg_desc = "AppAgent - Human Demonstration"
@@ -21,18 +21,15 @@ args = vars(parser.parse_args())
 
 configs = load_config()
 
-if configs["MODEL"] == "OpenAI":
-    mllm = OpenAIModel(base_url=configs["OPENAI_API_BASE"],
-                       api_key=configs["OPENAI_API_KEY"],
-                       model=configs["OPENAI_API_MODEL"],
-                       temperature=configs["TEMPERATURE"],
-                       max_tokens=configs["MAX_TOKENS"])
+if configs["MODEL"] == "GPT2":
+    mllm = GPT2Model(
+        model_name_or_path=configs["GPT2_MODEL"], max_length=configs["MAX_TOKENS"], temperature=configs["TEMPERATURE"])
 elif configs["MODEL"] == "Qwen":
     mllm = QwenModel(api_key=configs["DASHSCOPE_API_KEY"],
                      model=configs["QWEN_MODEL"])
 else:
-    print_with_color(f"ERROR: Unsupported model type {
-                     configs['MODEL']}!", "red")
+    print_with_color(
+        f"ERROR: Unsupported model type {configs['MODEL']}!", "red")
     sys.exit()
 
 root_dir = args["root_dir"]
@@ -57,15 +54,16 @@ docs_dir = os.path.join(work_dir, "demo_docs")
 if not os.path.exists(docs_dir):
     os.mkdir(docs_dir)
 
-print_with_color(f"Starting to generate documentations for the app {
-                 app} based on the demo {demo_name}", "yellow")
+print_with_color(
+    f"Starting to generate documentations for the app {app} based on the demo {demo_name}", "yellow")
 doc_count = 0
 with open(record_path, "r") as infile:
     step = len(infile.readlines()) - 1
     infile.seek(0)
     for i in range(1, step + 1):
         img_before = os.path.join(labeled_ss_dir, f"{demo_name}_{i}.png")
-        img_after = os.path.join(labeled_ss_dir, f"{demo_name}_{i + 1}.png")
+        img_after = os.path.join(
+            labeled_ss_dir, f"{demo_name}_{i + 1}.png")
         rec = infile.readline().strip()
         action, resource_id = rec.split(":::")
         action_type = action.split("(")[0]
@@ -104,11 +102,15 @@ with open(record_path, "r") as infile:
                     suffix = re.sub(
                         r"<old_doc>", doc_content[action_type], prompts.refine_doc_suffix)
                     prompt += suffix
-                    print_with_color(f"Documentation for the element {resource_id} already exists. The doc will be "
-                                     f"refined based on the latest demo.", "yellow")
+                    print_with_color(
+                        f"Documentation for the element {
+                            resource_id} already exists. The doc will be "
+                        f"refined based on the latest demo.", "yellow")
                 else:
-                    print_with_color(f"Documentation for the element {resource_id} already exists. Turn on DOC_REFINE "
-                                     f"in the config file if needed.", "yellow")
+                    print_with_color(
+                        f"Documentation for the element {
+                            resource_id} already exists. Turn on DOC_REFINE "
+                        f"in the config file if needed.", "yellow")
                     continue
         else:
             doc_content = {
@@ -120,8 +122,9 @@ with open(record_path, "r") as infile:
             }
 
         print_with_color(
-            f"Waiting for GPT-4V to generate documentation for the element {resource_id}", "yellow")
-        status, rsp = mllm.get_model_response(prompt, [img_before, img_after])
+            f"Waiting for GPT-2 to generate documentation for the element {resource_id}", "yellow")
+        status, rsp = mllm.get_model_response(
+            prompt, [img_before, img_after])
         if status:
             doc_content[action_type] = rsp
             with open(log_path, "a") as logfile:
@@ -131,11 +134,11 @@ with open(record_path, "r") as infile:
             with open(doc_path, "w") as outfile:
                 outfile.write(str(doc_content))
             doc_count += 1
-            print_with_color(f"Documentation generated and saved to {
-                             doc_path}", "yellow")
+            print_with_color(
+                f"Documentation generated and saved to {doc_path}", "yellow")
         else:
             print_with_color(rsp, "red")
         time.sleep(configs["REQUEST_INTERVAL"])
 
-print_with_color(f"Documentation generation phase completed. {
-                 doc_count} docs generated.", "yellow")
+print_with_color(
+    f"Documentation generation phase completed. {doc_count} docs generated.", "yellow")

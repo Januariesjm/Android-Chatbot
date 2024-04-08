@@ -13,7 +13,7 @@ from and_controller import list_all_devices, AndroidController, traverse_tree
 from model import parse_explore_rsp, parse_grid_rsp, GPT2Model
 from utils import print_with_color, draw_bbox_multi, draw_grid
 
-arg_desc = "AppAgent Executor"
+arg_desc = "Android Chatbot Executor"
 parser = argparse.ArgumentParser(
     formatter_class=argparse.RawDescriptionHelpFormatter, description=arg_desc)
 parser.add_argument("--app")
